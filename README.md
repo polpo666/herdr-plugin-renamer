@@ -138,6 +138,10 @@ installed setup with:
 It prints the slug on success and exits non-zero on any config or request
 failure.
 
+A step-by-step guide (Chinese) covering install, configuration, smoke testing
+and troubleshooting lives in
+[docs/lm-engine-tutorial.zh-CN.md](docs/lm-engine-tutorial.zh-CN.md).
+
 ## Local development
 
 ```sh
