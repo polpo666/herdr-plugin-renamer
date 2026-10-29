@@ -21,6 +21,7 @@ mod engine;
 mod foundation;
 mod git;
 mod herdr;
+mod lm;
 mod slug;
 mod transcript;
 
@@ -40,6 +41,25 @@ const PROMPT_POLL_ATTEMPTS: u32 = 20;
 const PROMPT_POLL_DELAY: Duration = Duration::from_millis(750);
 
 fn main() {
+    // Hidden maintenance hook: run one real LM naming request using the
+    // installed `lm.json` and print the slug. `herdr-plugin-renamer
+    // --lm-test "prompt"` validates the LAN engine after install.
+    let args: Vec<String> = env::args().collect();
+    if args.get(1).map(String::as_str) == Some("--lm-test") {
+        let prompt = args
+            .get(2)
+            .map(String::as_str)
+            .unwrap_or("Add retry with backoff to the ingestion pipeline");
+        match lm::generate_slug(prompt) {
+            Some(slug) => println!("{slug}"),
+            None => {
+                eprintln!("lm engine produced no slug (config missing or request failed)");
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
+
     if env::var("HERDR_NAMING_PHASE").as_deref() == Ok("cold") {
         cold_phase();
     } else {
@@ -200,11 +220,15 @@ fn cold_phase() {
 
 /// Walk the engine chain selected by `HERDR_NAMING_ENGINE`, returning the first
 /// slug an engine produces. `None` means every engine in the chain failed (so
-/// the caller uses the deterministic local fallback).
+/// the caller uses the deterministic local fallback). A readable `lm.json` in
+/// the plugin config dir puts the LAN LM engine at the front of the default
+/// chain; an explicit selection always wins.
 fn generate_slug(prompt: &str, slug_file: &Path) -> Option<String> {
     let selection = env::var("HERDR_NAMING_ENGINE").ok();
-    for eng in engine::engine_chain(selection.as_deref()) {
+    let lm_configured = lm::load().is_some();
+    for eng in engine::engine_chain(selection.as_deref(), lm_configured) {
         let result = match eng {
+            engine::Engine::Lm => lm::generate_slug(prompt),
             #[cfg(target_os = "macos")]
             engine::Engine::Foundation => foundation::generate_slug(prompt),
             engine::Engine::Codex => codex::generate_slug(prompt, slug_file),

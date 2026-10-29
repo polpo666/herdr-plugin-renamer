@@ -1,13 +1,13 @@
 [package]
 name = "herdr-plugin-renamer"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "Names herdr panes, and auto-generated worktree branches/workspaces, from the agent's first prompt."
-authors = ["Wyatt Johnson <wyattjoh@gmail.com>"]
+authors = ["Wyatt Johnson <wyattjoh@gmail.com>", "waltcow"]
 license = "MIT"
 readme = "README.md"
-repository = "https://github.com/wyattjoh/herdr-plugin-renamer"
-homepage = "https://github.com/wyattjoh/herdr-plugin-renamer"
+repository = "https://github.com/polpo666/herdr-plugin-renamer"
+homepage = "https://github.com/polpo666/herdr-plugin-renamer"
 keywords = ["herdr", "plugin", "worktree", "git", "agent"]
 categories = ["command-line-utilities", "development-tools"]
 
@@ -16,6 +16,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 glob = "0.3"
 libc = "0.2"
+ureq = { version = "2", features = ["json"] }
 
 [profile.release]
 lto = true

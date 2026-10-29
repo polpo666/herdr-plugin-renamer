@@ -77,10 +77,12 @@ All settings are optional.
 
 | Setting                       | Default        | Purpose                                      |
 | ----------------------------- | -------------- | -------------------------------------------- |
-| `HERDR_NAMING_ENGINE`         | `foundation`   | Use Foundation with Codex fallback, or `codex` only |
+| `HERDR_NAMING_ENGINE`         | auto           | `lm`, `foundation`, or `codex` (see engines below) |
 | `HERDR_NAMING_BRANCH_PREFIX`  | none           | Prefix renamed branches, such as `wyattjoh`  |
 | `HERDR_NAMING_FOUNDATION_BIN` | bundled helper | Override the FoundationModels helper path    |
 | `HERDR_NAMING_CODEX_BIN`      | `codex`        | Override the Codex executable path           |
+| `HERDR_NAMING_LM_URL`         | from `lm.json` | Override the LM chat-completions URL         |
+| `HERDR_NAMING_LM_MODEL`       | from `lm.json` | Override the LM model name                   |
 
 To configure a persistent branch prefix:
 
@@ -90,6 +92,51 @@ echo wyattjoh > "$(herdr plugin config-dir herdr-plugin-renamer)/branch-prefix"
 
 `HERDR_NAMING_BRANCH_PREFIX` takes precedence over that file. Environment
 variables must be available wherever herdr is launched.
+
+## Naming engines
+
+The slug for a rename comes from the first engine that produces one:
+
+1. **LM** (this fork) — a native OpenAI-compatible chat-completion request
+   against a private LAN server. Enabled automatically when `lm.json` exists
+   in the plugin config dir; leads the default chain on every platform.
+2. **Foundation** — on-device Apple FoundationModels (macOS only), with Codex
+   as the automatic fallback.
+3. **Codex** — headless `codex exec` using ChatGPT-account auth.
+
+Set `HERDR_NAMING_ENGINE` to `lm`, `foundation`, or `codex` to pin one engine;
+unset (or unknown) uses the default chain. If every engine in the chain fails,
+a deterministic slug is derived from the prompt locally.
+
+### LAN LM setup (`lm.json`)
+
+```sh
+herdr plugin config-dir herdr-plugin-renamer
+```
+
+Create `lm.json` in that directory:
+
+```json
+{
+  "url": "https://lm.example.net/v1/chat/completions",
+  "resolve": "lm.example.net:443:192.168.50.141",
+  "model": "qwen3.8-flash-next-nvfp4",
+  "timeout_seconds": 22
+}
+```
+
+`resolve` is an optional DNS pin (curl's `--resolve` spelling,
+`host:port:ip`): traffic for that host goes straight to the IP while TLS SNI
+and certificate validation stay on the hostname. `timeout_seconds` defaults
+the whole request to 22s; the connect phase is capped at 3s. Validate the
+installed setup with:
+
+```sh
+"$(herdr plugin list --json | jq -r '.result.plugins[] | select(.plugin_id=="herdr-plugin-renamer") | .plugin_root')/target/release/herdr-plugin-renamer" --lm-test "Add retry to the sync worker"
+```
+
+It prints the slug on success and exits non-zero on any config or request
+failure.
 
 ## Local development
 
