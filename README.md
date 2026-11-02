@@ -1,8 +1,8 @@
 # herdr-plugin-renamer
 
-A [herdr](https://herdr.dev) plugin that names panes from a coding agent's first
-prompt. In auto-generated linked worktrees, it also renames the git branch and
-workspace.
+A [herdr](https://herdr.dev) plugin that names panes and their tabs from a
+coding agent's first prompt. In auto-generated linked worktrees, it also renames
+the git branch and workspace.
 
 It supports Claude Code, Codex, and Pi. Slugs come from Apple FoundationModels on
 supported Macs, then Codex, then a deterministic local fallback.
@@ -42,8 +42,9 @@ prompt.
 
 ## What it renames
 
-A prompt about reviewing a cache might rename the pane to `cache-review`. In an
-auto-generated linked worktree, the plugin can also rename:
+A prompt about reviewing a cache might rename the pane, and the tab holding it,
+to `cache-review`. In an auto-generated linked worktree, the plugin can also
+rename:
 
 - branch: `<prefix>/cache-review`, or `cache-review` without a prefix
 - workspace: `cache-review`
@@ -78,6 +79,7 @@ All settings are optional.
 | Setting                       | Default        | Purpose                                      |
 | ----------------------------- | -------------- | -------------------------------------------- |
 | `HERDR_NAMING_ENGINE`         | auto           | `lm`, `foundation`, or `codex` (see engines below) |
+| `HERDR_NAMING_TAB`            | on             | Set to `0` or `false` to keep tab renaming off |
 | `HERDR_NAMING_BRANCH_PREFIX`  | none           | Prefix renamed branches, such as `wyattjoh`  |
 | `HERDR_NAMING_FOUNDATION_BIN` | bundled helper | Override the FoundationModels helper path    |
 | `HERDR_NAMING_CODEX_BIN`      | `codex`        | Override the Codex executable path           |

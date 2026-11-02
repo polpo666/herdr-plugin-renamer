@@ -10,7 +10,7 @@
 //!     phase detached and exits.
 //!   - COLD (`HERDR_NAMING_PHASE=cold`): does the slow work (poll for the
 //!     session, read the first prompt, generate a slug via the engine chain,
-//!     rename the pane, and maybe rename branch + workspace).
+//!     rename the pane and its tab, and maybe rename branch + workspace).
 //!
 //! Every path exits 0 (fail open) so the hook never wedges herdr.
 
@@ -172,6 +172,19 @@ fn cold_phase() {
     let ok = herdr::pane_rename(&pane_id, &slug);
     debug_log(&format!("cold: pane {pane_id} -> {slug} ok={ok}"));
 
+    // Name the holding tab too, so the tab bar shows the slug even when the
+    // display fallback to the pane label is unavailable (multi-pane tabs, or
+    // focus resting on a non-agent pane). Opt out with HERDR_NAMING_TAB=0.
+    if tab_rename_enabled() {
+        match herdr::pane_tab_id(&pane_id) {
+            Some(tab_id) => {
+                let ok = herdr::tab_rename(&tab_id, &slug);
+                debug_log(&format!("cold: tab {tab_id} -> {slug} ok={ok}"));
+            }
+            None => debug_log("cold: no tab for pane, skipping tab rename"),
+        }
+    }
+
     // Publish the same task name as display metadata so users can place `$task`
     // in custom Agent and Space sidebar rows. Metadata failures do not affect
     // the persistent pane, branch, or workspace renames.
@@ -255,6 +268,15 @@ fn compose_branch(prefix: Option<&str>, slug: &str) -> String {
         Some(prefix) => format!("{prefix}/{slug}"),
         None => slug.to_string(),
     }
+}
+
+/// Tab renaming follows the pane rename by default; `HERDR_NAMING_TAB=0` (or
+/// `false`) turns it off without touching the other rename outputs.
+fn tab_rename_enabled() -> bool {
+    !matches!(
+        env::var("HERDR_NAMING_TAB").as_deref(),
+        Ok("0") | Ok("false")
+    )
 }
 
 /// Resolve the branch prefix, in priority order: the `HERDR_NAMING_BRANCH_PREFIX`

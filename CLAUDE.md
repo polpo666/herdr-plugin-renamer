@@ -1,10 +1,10 @@
 # CLAUDE.md
 
-herdr plugin (Rust) that names a herdr pane from the coding agent's
-first prompt. When the pane is in an auto-generated linked worktree, it also
-renames the worktree branch and workspace. The naming engine is swappable:
-on-device Apple FoundationModels by default (a small Swift helper), with a
-headless Codex call as the automatic fallback.
+herdr plugin (Rust) that names a herdr pane, and the tab holding it, from the
+coding agent's first prompt. When the pane is in an auto-generated linked
+worktree, it also renames the worktree branch and workspace. The naming engine
+is swappable: on-device Apple FoundationModels by default (a small Swift
+helper), with a headless Codex call as the automatic fallback.
 
 ## Architecture
 
@@ -17,14 +17,17 @@ Single binary, two phases (`src/main.rs`):
 - **Cold phase** (`HERDR_NAMING_PHASE=cold`): `herdr::poll_agent_session` →
   `transcript::read_first_prompt` → `main::generate_slug` (walks the
   `engine::engine_chain`; fallback `slug::fallback_from_prompt`) →
-  `herdr::pane_rename`. The generated slug is also reported as the `task`
+  `herdr::pane_rename`, then (unless `HERDR_NAMING_TAB` disables it)
+  `herdr::pane_tab_id` → `herdr::tab_rename` on the holding tab. The generated
+  slug is also reported as the `task`
   metadata token on the pane and workspace for custom Agent and Space sidebar
   rows. If the pane is in a
   linked worktree whose current branch starts with `worktree/`,
   `git::rename_current_branch` renames it to `<prefix>/<slug>` and only then
   `herdr::workspace_rename` renames the workspace to `<slug>`.
 
-Naming outputs: pane `<slug>`; branch `<prefix>/<slug>` (bare `<slug>` when no prefix is configured;
+Naming outputs: pane `<slug>`; tab `<slug>` on the pane's holding tab (unless
+`HERDR_NAMING_TAB=0`); branch `<prefix>/<slug>` (bare `<slug>` when no prefix is configured;
 `main::compose_branch` joins them); workspace `<slug>` after a successful
 worktree branch rename. The prefix comes from `main::resolve_branch_prefix`:
 `HERDR_NAMING_BRANCH_PREFIX` env, then a `branch-prefix` file in
@@ -169,7 +172,9 @@ Verify the Linux build with `cargo check --target x86_64-unknown-linux-gnu`.
 - Branch/workspace renaming uses a git safety re-check, not workspace label
   inference: only linked worktrees whose current branch starts with `worktree/`
   are renamed, and workspace rename runs only after branch rename succeeds.
-- Panes are renamed with `herdr pane rename`.
+- Panes are renamed with `herdr pane rename`. The holding tab is renamed with
+  `herdr tab rename` using the `tab_id` reported on the pane object (`herdr pane
+  get`); a missing tab id only skips the tab rename.
 - `agent_session` agent label is `claude`, `codex`, or `pi`; transcripts:
   Claude `~/.claude/projects/**/<uuid>.jsonl`, Codex
   `~/.codex/sessions/**/rollout-*<uuid>.jsonl`, Pi's reported session path.
